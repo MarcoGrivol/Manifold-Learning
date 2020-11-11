@@ -1,44 +1,35 @@
+from sklearn import datasets, manifold
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-from collections import OrderedDict
+import numpy as np
 
-from sklearn import manifold, datasets
+def fit_plot( x, y, n_neighbors, n_components ):
+    isomap = manifold.Isomap( n_neighbors=n_neighbors, n_components=n_components )
+    x_isomap = isomap.fit_transform( x )
+    
+    lle = manifold.LocallyLinearEmbedding( n_neighbors=10, n_components=2 )
+    x_lle = lle.fit_transform( x )
+    
+    fig, (ax1, ax2) = plt.subplots( 1, 2 )
+    
+    x1_vals = x_isomap[:, 0]
+    y1_vals = x_isomap[:, 1]
+    ax1.scatter( x1_vals, y1_vals, c=y )
+    
+    x2_vals = x_lle[:, 0]
+    y2_vals = x_lle[:, 1] 
+    ax2.scatter( x2_vals, y2_vals, c=y )
+    plt.show()
 
-# Next line to silence pyflakes. This import is needed.
-Axes3D
+if __name__ == "__main__":
+    x = np.loadtxt('data_scurve.txt')
+    y = np.loadtxt('label_scurve.txt')
 
-n_points = 1000
-points = datasets.make_s_curve( n_points, random_state=0)
-X = points[0]
-color = points[1]
-n_neighbors = 10
-n_components = 2
+    idx = y.argsort()
+    y.sort()
+    x = x[idx]
 
-fig = plt.figure(figsize=(15, 8))
+    x = np.concatenate( (x[:270], x[300:]) )
+    y = np.concatenate( (y[:270], y[300:]) )
 
-# add 3d scatter plot
-ax = fig.add_subplot(251, projection='3d')
-ax.scatter(X[:, 0], X[:, 1], X[:, 2], c=color, cmap=plt.cm.Spectral)
-ax.view_init(4, -72)
-
-# setup manifold methods
-clf = manifold.LocallyLinearEmbedding(n_neighbors=n_neighbors, n_components=n_components, method='standard')
-methods = OrderedDict()
-methods['Isomap_10'] = manifold.Isomap(n_neighbors=n_neighbors, n_components=n_components)
-methods['LLE_10'] = manifold.LocallyLinearEmbedding(n_neighbors=n_neighbors, n_components=n_components, method='standard')
-methods['Isomap_50'] = manifold.Isomap(n_neighbors=n_neighbors+40, n_components=n_components)
-methods['LLE_50'] = manifold.LocallyLinearEmbedding(n_neighbors=n_neighbors+40, n_components=n_components, method='standard')
-methods['Isomap_75'] = manifold.Isomap(n_neighbors=n_neighbors+65, n_components=n_components)
-methods['LLE_75'] = manifold.LocallyLinearEmbedding(n_neighbors=n_neighbors+65, n_components=n_components, method='standard')
-methods['Isomap_100'] = manifold.Isomap(n_neighbors=n_neighbors+90, n_components=n_components)
-methods['LLE_100'] = manifold.LocallyLinearEmbedding(n_neighbors=n_neighbors+90, n_components=n_components, method='standard')
-
-
-# plot
-for i, (label, method) in enumerate(methods.items()):
-    Y = method.fit_transform(X)
-    ax = fig.add_subplot(2, 5, 2 + i + (i > 3))
-    ax.scatter(Y[:, 0], Y[:, 1], c=color, cmap=plt.cm.Spectral)
-    ax.set_title("%s" % (label))
-
-plt.show()
+    fit_plot( x, y, n_neighbors=10, n_components=2 )
