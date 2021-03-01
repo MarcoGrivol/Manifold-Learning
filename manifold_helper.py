@@ -103,8 +103,8 @@ def get_true_labels( y ):
 def isomap( data, n_neighbors, n_components ):
     return manifold.Isomap( n_neighbors=n_neighbors, n_components=n_components ).fit_transform( data )
 
-def GMM( data, labels ):
-    gmm = mixture.GaussianMixture( n_components=2, covariance_type='full' )
+def GMM( data, labels, n_components ):
+    gmm = mixture.GaussianMixture( n_components=n_components, covariance_type='full' )
     gmm = gmm.fit( data )
     return metrics.adjusted_rand_score( labels, gmm.predict( data ) )
     
@@ -117,33 +117,42 @@ def laplace( data, n_neighbors, n_components ):
 def ltsa( data, n_neighbors, n_components ):
     return manifold.LocallyLinearEmbedding( n_neighbors=n_neighbors, n_components=n_components, method='ltsa' ).fit_transform( data )
 
-def ari_results( data, n_components, step, rnge, labels ):
+def ari_results( data, n_components, step, rnge, labels, colors ):
     y_isomap = []
     y_lle = []
     y_laplace = []
     y_ltsa = []
     neighbors_range = [i for i in rnge if i % step == 0]
+    
+    erro = False
+    
     for i in neighbors_range:
         y_isomap.append( isomap( data, i, n_components ) )
         y_lle.append( lle( data, i , n_components ) )
         y_laplace.append( laplace( data, i, n_components ) )
-        y_ltsa.append( ltsa( data, i, n_components ) )
+        try:
+            y_ltsa.append( ltsa( data, i, n_components ) )
+        except:
+            erro = True
         
     ari_isomap = []
     ari_lle = []
     ari_laplace = []
     ari_ltsa = []
     for i in range( len( y_isomap ) ):
-        ari_isomap.append( GMM( y_isomap[i], labels ) )
-        ari_lle.append( GMM( y_lle[i], labels ) )
-        ari_laplace.append( GMM( y_laplace[i], labels ) )
-        ari_ltsa.append( GMM( y_ltsa[i], labels ) )
-#         print( i, ": iso=",  ari_isomap[i], " lle=", ari_lle[i], " lapl=", ari_laplace[i], " ltsa=", ari_ltsa[i] )
+        ari_isomap.append( GMM( y_isomap[i], labels, n_components ) )
+        ari_lle.append( GMM( y_lle[i], labels, n_components ) )
+        ari_laplace.append( GMM( y_laplace[i], labels, n_components ) )
+        if not erro:
+            ari_ltsa.append( GMM( y_ltsa[i], labels, n_components ) )
+            
     fig = plt.figure()
     ax = fig.add_subplot()
     
     x_vals = neighbors_range
-    ax.scatter( x_vals, ari_isomap )
-    ax.scatter( x_vals, ari_lle )
-    ax.scatter( x_vals, ari_laplace )
-    ax.scatter( x_vals, ari_ltsa )
+    ax.scatter( x_vals, ari_isomap, c=colors[0], label="Isomap" )
+    ax.scatter( x_vals, ari_lle, c=colors[1], label="LLE" )
+    ax.scatter( x_vals, ari_laplace, c=colors[2], label="Laplace" )
+    if not erro:
+        ax.scatter( x_vals, ari_ltsa, c=colors[3], label="LTSA" )
+    ax.legend()
