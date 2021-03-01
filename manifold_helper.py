@@ -8,7 +8,7 @@ from scipy import stats, linalg
 import itertools
 from math import ceil
 
-def fit_plot( x, y, n_neighbors, n_components ):
+def fit_plot( x, n_neighbors, n_components, y_colors ):
     isomap = manifold.Isomap( n_neighbors=n_neighbors, n_components=n_components )
     y_isomap = isomap.fit_transform( x )
     
@@ -35,25 +35,25 @@ def fit_plot( x, y, n_neighbors, n_components ):
     
     x1_vals = y_isomap[:, 0]
     y1_vals = y_isomap[:, 1]
-    ax1.scatter( x1_vals, y1_vals, c=y )
+    ax1.scatter( x1_vals, y1_vals, c=y_colors )
     ax1.set_xticklabels( [] )
     ax1.set_yticklabels( [] )
     
     x2_vals = y_lle[:, 0]
     y2_vals = y_lle[:, 1] 
-    ax2.scatter( x2_vals, y2_vals, c=y )
+    ax2.scatter( x2_vals, y2_vals, c=y_colors )
     ax2.set_xticklabels( [] )
     ax2.set_yticklabels( [] )
     
     x3_vals = y_laplace[:, 0]
     y3_vals = y_laplace[:, 1]
-    ax3.scatter( x3_vals, y3_vals, c=y )
+    ax3.scatter( x3_vals, y3_vals, c=y_colors )
     ax3.set_xticklabels( [] )
     ax3.set_yticklabels( [] )
     
     x4_vals = y_ltsa[:, 0]
     y4_vals = y_ltsa[:, 1]
-    ax4.scatter( x4_vals, y4_vals, c=y )
+    ax4.scatter( x4_vals, y4_vals, c=y_colors )
     ax4.set_xticklabels( [] )
     ax4.set_yticklabels( [] )
     
@@ -61,8 +61,9 @@ def fit_plot( x, y, n_neighbors, n_components ):
     
     return (y_isomap, y_lle, y_laplace, y_ltsa)
 
-def gmm_results(X, Y_, means, covariances, index, title):
-    color_iter = itertools.cycle(['purple', 'blue'])
+def gmm_results(X, Y_, means, covariances, title, colors, index=0):
+#     color_iter = itertools.cycle(['purple', 'blue'])
+    color_iter = itertools.cycle( colors )
     fig = plt.figure()
     splot = fig.add_subplot()
     for i, (mean, covar, color) in enumerate(zip(
@@ -116,17 +117,17 @@ def laplace( data, n_neighbors, n_components ):
 def ltsa( data, n_neighbors, n_components ):
     return manifold.LocallyLinearEmbedding( n_neighbors=n_neighbors, n_components=n_components, method='ltsa' ).fit_transform( data )
 
-def ari_results( data, step, rnge, labels ):
+def ari_results( data, n_components, step, rnge, labels ):
     y_isomap = []
     y_lle = []
     y_laplace = []
     y_ltsa = []
     neighbors_range = [i for i in rnge if i % step == 0]
     for i in neighbors_range:
-        y_isomap.append( isomap( data, i, 2 ) )
-        y_lle.append( lle( data, i , 2 ) )
-        y_laplace.append( laplace( data, i, 2 ) )
-        y_ltsa.append( ltsa( data, i, 2 ) )
+        y_isomap.append( isomap( data, i, n_components ) )
+        y_lle.append( lle( data, i , n_components ) )
+        y_laplace.append( laplace( data, i, n_components ) )
+        y_ltsa.append( ltsa( data, i, n_components ) )
         
     ari_isomap = []
     ari_lle = []
