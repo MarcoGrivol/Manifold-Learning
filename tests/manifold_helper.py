@@ -61,34 +61,7 @@ def fit_plot( x, n_neighbors, n_components, label_colors ):
     
     return (y_isomap, y_lle, y_laplace, y_ltsa)
     
-def gmm_results(X, Y_, means, covariances, title, label_colors, index=0):
-    fig = plt.figure()
-    splot = fig.add_subplot()
-    for i, (mean, covar) in enumerate(zip(
-            means, covariances)):
-        color_index = np.where(Y_ == i)[0][0]
-        v, w = linalg.eigh(covar)
-        v = 2. * np.sqrt(2.) * np.sqrt(v)
-        u = w[0] / linalg.norm(w[0])
-        # as the DP will not use every component it has access to
-        # unless it needs it, we shouldn't plot the redundant
-        # components.
-        if not np.any(Y_ == i):
-            continue
-       
-        plt.scatter(X[Y_ == i, 0], X[Y_ == i, 1], .8, color=label_colors[color_index])
 
-        # Plot an ellipse to show the Gaussian component
-        angle = np.arctan(u[1] / u[0])
-        angle = 180. * angle / np.pi  # convert to degrees
-        ell = mpl.patches.Ellipse(mean, v[0], v[1], 180. + angle, color=label_colors[color_index])
-        ell.set_clip_box(splot.bbox)
-        ell.set_alpha(0.5)
-        splot.add_artist(ell)
-    plt.xticks(())
-    plt.yticks(())
-    plt.title(title)
-    plt.show()
     
 def get_true_labels( y ):
     true_labels = []
@@ -156,3 +129,32 @@ def ari_results( data, n_components, step, rnge, labels, colors ):
     if not erro:
         ax.scatter( x_vals, ari_ltsa, c=colors[3], label="LTSA" )
     ax.legend()
+    
+def gmm_results(X, Y_, means, covariances, title, label_colors, index=0):
+    fig = plt.figure()
+    splot = fig.add_subplot()
+    for i, (mean, covar) in enumerate(zip(
+            means, covariances)):
+        color_index = np.where(Y_ == i)[0][0]
+        v, w = linalg.eigh(covar)
+        v = 2. * np.sqrt(2.) * np.sqrt(v)
+        u = w[0] / linalg.norm(w[0])
+        # as the DP will not use every component it has access to
+        # unless it needs it, we shouldn't plot the redundant
+        # components.
+        if not np.any(Y_ == i):
+            continue
+       
+        plt.scatter(X[Y_ == i, 0], X[Y_ == i, 1], .8, color=label_colors[color_index])
+
+        # Plot an ellipse to show the Gaussian component
+        angle = np.arctan(u[1] / u[0])
+        angle = 180. * angle / np.pi  # convert to degrees
+        ell = mpl.patches.Ellipse(mean, v[0], v[1], 180. + angle, color=label_colors[color_index])
+        ell.set_clip_box(splot.bbox)
+        ell.set_alpha(0.5)
+        splot.add_artist(ell)
+    plt.xticks(())
+    plt.yticks(())
+    plt.title(title)
+    plt.show()
