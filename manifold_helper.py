@@ -1,6 +1,8 @@
 from typing import OrderedDict
 from sklearn import manifold, mixture, metrics
 from ltsa import LocalTangentSpaceAlignment as LTSA
+import matplotlib.pyplot as plt
+import os.path
 import numpy as np
 
 def unpickle(file):
@@ -84,18 +86,21 @@ class ManifoldHelper:
             return manifold.Isomap(
                 n_neighbors=n_neighbors, 
                 n_components=d_dimension,
+                n_jobs= -1
             )
         elif method_name == 'LLE':
             return manifold.LocallyLinearEmbedding(
                 n_neighbors=n_neighbors,
                 n_components=d_dimension,
-                random_state=42
+                random_state=42,
+                n_jobs= -1
             )
         elif method_name == 'SE':
             return manifold.SpectralEmbedding(
                 n_neighbors=n_neighbors,
                 n_components=d_dimension,
-                random_state=42
+                random_state=42,
+                n_jobs= -1
             )
         elif method_name == 'LTSA':
             if self.sklearn_LTSA:
@@ -104,7 +109,8 @@ class ManifoldHelper:
                     n_components=d_dimension,
                     method='ltsa',
                     eigen_solver=self.eigen_solver,
-                    random_state=42
+                    random_state=42,
+                    n_jobs= -1
                 )
             else:
                 return LTSA(n_neighbors=n_neighbors, n_components=d_dimension)
@@ -121,3 +127,33 @@ class ManifoldHelper:
             Evaluates X and Y with Adjusted Rand Index (ARI)
         """
         return metrics.adjusted_rand_score(X, Y)
+    
+    def saveARI(self, ari_results, path='results/', add=''):
+        for method, data in ari_results.items():
+            if not os.path.isfile(f'{path}{method}_{add}.npy'):
+                with open(f'{path}{method}_{add}.npy', 'wb') as file:
+                    np.save(file, data)
+                    print(data)
+            else:
+                print(f'File exists! saveARI does not override.')
+        
+    def loadARI(self, methods, path='results/', add=''):
+        ari_results = OrderedDict()
+        for m in methods:
+            ari_results[m] = np.load(f'{path}{m}_{add}.npy')
+        return ari_results
+
+    def plot_ari_results(self, ari_results, methods):
+        fig, axs = plt.subplots(1, len(methods), figsize=(20, 20))
+        for ax, m in zip(axs, methods):
+            ax.matshow(ari_results[m], cmap='Blues')
+            ax.set_title(m)
+            ax.set_xticks([i for i in range(len(neighbors))])
+            ax.set_xlabel('Vizinhos')
+            ax.set_yticks([i for i in range(len(dimensions))])
+            ax.set_ylabel('Dimensoes')
+            ax.set_xticklabels(neighbors)
+            ax.set_yticklabels(dimensions)
+            for (i, j), z in np.ndenumerate(ari_results[m]):
+                ax.text(j, i, '{:0.2f}'.format(z), ha='center', va='center')
+        plt.show()
