@@ -5,8 +5,6 @@ import matplotlib.pyplot as plt
 import os.path
 from time import time
 import numpy as np
-from megaman.geometry import Geometry
-from megaman.embedding import Isomap, LocallyLinearEmbedding, LTSA, SpectralEmbedding
 
 def unpickle(file):
     """
@@ -24,8 +22,8 @@ class ManifoldHelper:
         n_neighbors=[10], 
         dimensions=[2], 
         methods=['ISOMAP'],
-        megaman=True,
-        alternative_LTSA=False,
+        megaman=False,
+        alternative_LTSA=True,
         eigen_solver='auto',
         gmm_n_init=5
     ):
@@ -41,9 +39,11 @@ class ManifoldHelper:
         if self.alternative_LTSA:
             print('Using alternative LTSA.')
         if self.megaman:
+            from megaman.geometry import Geometry
+            from megaman.embedding import Isomap, LocallyLinearEmbedding, LTSA, SpectralEmbedding
             print('Using megaman manifold methods.')
         else:
-            print('Using sklean manifold methods.')
+            print('Using sklearn manifold methods.')
 
     def fit_transform(self, X, method, n_neighbors, d_dimension) -> np.ndarray:
         """fit_transform
@@ -85,7 +85,7 @@ class ManifoldHelper:
                         ari_results[m][i, j] = 0.0
                         t0 = 0
                         t1 = -1
-                    print(f' {ari_results[m][i, j]:.2f}({(t1 - t0):.2g}s) ', end='')
+                    print(f' {ari_results[m][i, j]:.2f}({(t1 - t0):.1f}s) ', end='')
         return ari_results
                     
 
@@ -161,21 +161,21 @@ class ManifoldHelper:
             return manifold.Isomap(
                 n_neighbors=n_neighbors, 
                 n_components=d_dimension,
-                n_jobs= -1
+                n_jobs= -2
             )
         elif method_name == 'LLE':
             return manifold.LocallyLinearEmbedding(
                 n_neighbors=n_neighbors,
                 n_components=d_dimension,
                 random_state=42,
-                n_jobs= -1
+                n_jobs= -2
             )
         elif method_name == 'SE':
             return manifold.SpectralEmbedding(
                 n_neighbors=n_neighbors,
                 n_components=d_dimension,
                 random_state=42,
-                n_jobs= -1
+                n_jobs= -2
             )
         elif method_name == 'LTSA':
             if self.alternative_LTSA:
@@ -188,8 +188,14 @@ class ManifoldHelper:
                     method='ltsa',
                     eigen_solver=self.eigen_solver,
                     random_state=42,
-                    n_jobs= -1
+                    n_jobs= -2
                 )
+        elif method_name == 'TSNE':
+            return manifold.TSNE(
+                n_components=d_dimension,
+                random_state=42,
+                n_jobs=-2
+            )
         
     
     def _gmm_predict(self, X, n_components) -> list:
@@ -220,17 +226,17 @@ class ManifoldHelper:
             ari_results[m] = np.load(f'{path}{m}_{add}.npy')
         return ari_results
 
-    def plot_ari_results(self, ari_results):
-        fig, axs = plt.subplots(1, len(self.methods), figsize=(20, 20))
-        for ax, m in zip(axs, self.methods):
-            ax.matshow(ari_results[m], cmap='Blues')
+    def plot_ari_results(self, ari_results, neighbors, dimensions):
+        fig, axs = plt.subplots(1, len(ari_results), figsize=(20, 20))
+        for ax, m in zip(axs, ari_results.keys()):
+            ax.matshow(ari_results[m], cmap='seismic')
             ax.set_title(m)
-            ax.set_xticks([i for i in range(len(self.n_neighbors))])
+            ax.set_xticks([i for i in range(len(neighbors))])
             ax.set_xlabel('Vizinhos')
-            ax.set_yticks([i for i in range(len(self.dimensions))])
+            ax.set_yticks([i for i in range(len(dimensions))])
             ax.set_ylabel('Dimensoes')
-            ax.set_xticklabels(self.n_neighbors)
-            ax.set_yticklabels(self.dimensions)
+            ax.set_xticklabels(neighbors)
+            ax.set_yticklabels(dimensions)
             for (i, j), z in np.ndenumerate(ari_results[m]):
                 ax.text(j, i, '{:0.2f}'.format(z), ha='center', va='center')
         plt.show()
