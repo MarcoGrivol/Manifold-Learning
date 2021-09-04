@@ -229,7 +229,7 @@ class ManifoldHelper:
     def plot_ari_results(self, ari_results, neighbors, dimensions):
         fig, axs = plt.subplots(1, len(ari_results), figsize=(20, 20))
         for ax, m in zip(axs, ari_results.keys()):
-            ax.matshow(ari_results[m], cmap='seismic')
+            ax.matshow(ari_results[m], cmap='RdYlGn')
             ax.set_title(m)
             ax.set_xticks([i for i in range(len(neighbors))])
             ax.set_xlabel('Vizinhos')
