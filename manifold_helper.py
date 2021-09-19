@@ -22,26 +22,20 @@ class ManifoldHelper:
         n_neighbors=[10], 
         dimensions=[2], 
         methods=['ISOMAP'],
-        megaman=False,
         alternative_LTSA=True,
-        eigen_solver='auto',
+        eigen_solver='arpack',
         gmm_n_init=5
     ):
         
         self.n_neighbors = n_neighbors
         self.dimensions = dimensions
         self.methods = methods
-        self.megaman = megaman
         self.alternative_LTSA = alternative_LTSA
         self.eigen_solver = eigen_solver
         self.gmm_n_init = gmm_n_init
         
         if self.alternative_LTSA:
             print('Using alternative LTSA.')
-        if self.megaman:
-            from megaman.geometry import Geometry
-            from megaman.embedding import Isomap, LocallyLinearEmbedding, LTSA, SpectralEmbedding
-            print('Using megaman manifold methods.')
         else:
             print('Using sklearn manifold methods.')
 
@@ -75,82 +69,37 @@ class ManifoldHelper:
                 print(f'\n   {n}_neighbors:', end='')
 
                 for m in self.methods:
-                    try:
-                        t0 = time()
-                        Xd = self.fit_transform(X, m, n, d)
-                        t1 = time()
-                        ari_results[m][i, j] = self.evaluate_gmm_ari(Xd, Y, n_components)
-                    except:
-                        # LTSA may fail
-                        ari_results[m][i, j] = 0.0
-                        t0 = 0
-                        t1 = -1
-                    print(f' {ari_results[m][i, j]:.2f}({(t1 - t0):.1f}s) ', end='')
+                    ari_results[m][i, j], time = self._evaluate_method(X, Y, m, n, d, n_components)
+                    print(f' {ari_results[m][i, j]:.2f}({(time):.1f}s) ', end='')
         return ari_results
                     
+    def _evaluate_method(self, X, Y, method, n_neighbors, d_dimension, n_components):
+        try:
+            t0 = time()
+            Xd = self.fit_transform(X, method, n_neighbors, d_dimension)
+            t1 = time()
+            ari_result = self.evaluate_gmm_ari(Xd, Y, n_components)
+        except:
+            # LTSA pode falhar com eigen_solver de sklearn
+            try:
+                # tente trocar o eigen_solver para ver se há alteração de resultado
+                self._change_eigen_solver()
+                t0 = time()
+                Xd = self.fit_transform(X, method, n_neighbors, d_dimension)
+                t1 = time()
+                ari_result = self.evaluate_gmm_ari(Xd, Y, n_components)
+                # se esta mensagem aparecer significa que o eigen_solver foi alterado com sucesso
+                print(f'eigen_solver={self.eigen_solver}', end='')
+                # volte o eigen_solver ao definido pelo usuário
+                self._change_eigen_solver() 
+            except:
+                ari_result = -1
+                t0 = 0
+                t1 = -1
 
-    def _get_manifold_method(
-        self, 
-        method_name, 
-        n_neighbors,
-        d_dimension
-    ) -> manifold:
-        """_get_manifold_method
-            Returns sklearn.manifold object corresponding to method_name.
-        """
-        if self.megaman:
-            return self._get_megaman_manifold(method_name, n_neighbors, d_dimension)
-        else:
-            return self._get_sklearn_manifold(method_name, n_neighbors, d_dimension)
-        
-    def _get_megaman_manifold(
-        self,
-        method_name,
-        n_neighbors,
-        d_dimension
-    ) -> manifold:
-        
-        adjacency_kwds = {'n_neighbors':n_neighbors}
-        adjacency_method = 'cyflann'
-        
-        if method_name == 'ISOMAP':
-            geom = Geometry(adjacency_method=adjacency_method, adjacency_kwds=adjacency_kwds)
-            return Isomap(
-                geom=geom,
-                n_components=d_dimension,
-                eigen_solver='amg'
-            )
-        elif method_name == 'LLE':
-            geom = Geometry(adjacency_method=adjacency_method, adjacency_kwds=adjacency_kwds)
-            return LocallyLinearEmbedding(
-                geom=geom,
-                n_components=d_dimension,
-                eigen_solver='amg'
-            )
-        elif method_name == 'SE':
-            laplacian_Method = 'geometric'
-            affinity_method = 'gaussian'
-            geom = Geometry(adjacency_method=adjacency_method, 
-                            adjacency_kwds=adjacency_kwds,
-                            affinity_method=affinity_method,
-                           laplacian_method=laplacian_method)
-            return SpectralEmbedding(
-                geom=geom,
-                n_components=d_dimension,
-                eigen_solver='amg'
-            )
-        elif method_name == 'LTSA':
-            if self.alternative_LTSA:
-                return LocalTangentSpaceAlignment(
-                    n_neighbors=n_neighbors, n_components=d_dimension)
-            else:
-                return LTSA(
-                    geom=geom,
-                    n_components=d_dimension,
-                    eigen_solver='amg'
-                )
+        return (ari_result, t1 - t0)
             
-    def _get_sklearn_manifold(
+    def _get_manifold_method(
         self, 
         method_name, 
         n_neighbors, 
@@ -197,7 +146,6 @@ class ManifoldHelper:
                 n_jobs=-2
             )
         
-    
     def _gmm_predict(self, X, n_components) -> list:
         """__gmm_predict
             Creates a Gaussian Mixture Model and predicts labels.
@@ -210,6 +158,12 @@ class ManifoldHelper:
             Evaluates X and Y with Adjusted Rand Index (ARI)
         """
         return metrics.adjusted_rand_score(X, Y)
+
+    def _change_eigen_solver(self):
+        if self.eigen_solver == 'arpack':
+            self.eigen_solver = 'dense'
+        elif self.eigen_solver == 'dense':
+            self.eigen_solver = 'arpack'
     
     def saveARI(self, ari_results, path='results/', add=''):
         for method, data in ari_results.items():
@@ -229,7 +183,8 @@ class ManifoldHelper:
     def plot_ari_results(self, ari_results, neighbors, dimensions):
         fig, axs = plt.subplots(1, len(ari_results), figsize=(20, 20))
         for ax, m in zip(axs, ari_results.keys()):
-            ax.matshow(ari_results[m], cmap='RdYlGn')
+            # alternative cmap RdYlGn
+            ax.matshow(ari_results[m], cmap='gray', vmin=-1.0, vmax=1.0)
             ax.set_title(m)
             ax.set_xticks([i for i in range(len(neighbors))])
             ax.set_xlabel('Vizinhos')
