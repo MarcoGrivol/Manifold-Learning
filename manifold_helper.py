@@ -185,7 +185,10 @@ class ManifoldHelper:
         for ax, m in zip(axs, ari_results.keys()):
             # alternative cmap RdYlGn
             ax.matshow(ari_results[m], cmap='RdYlGn', vmin=-1.0, vmax=1.0)
-            ax.set_title(m)
+            if m == 'SE':
+                ax.set_title('Laplacian Eigenmaps')
+            else:
+                ax.set_title(m)
             ax.set_xticks([i for i in range(len(neighbors))])
             ax.set_xlabel('Vizinhos')
             ax.set_yticks([i for i in range(len(dimensions))])
