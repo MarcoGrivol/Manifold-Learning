@@ -93,7 +93,7 @@ class ManifoldHelper:
                 # volte o eigen_solver ao definido pelo usuário
                 self._change_eigen_solver() 
             except:
-                ari_result = -1
+                ari_result = -1.0
                 t0 = 0
                 t1 = -1
 
@@ -196,5 +196,6 @@ class ManifoldHelper:
             ax.set_xticklabels(neighbors)
             ax.set_yticklabels(dimensions)
             for (i, j), z in np.ndenumerate(ari_results[m]):
+                
                 ax.text(j, i, '{:0.2f}'.format(z), ha='center', va='center')
         plt.show()
