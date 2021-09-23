@@ -3,8 +3,8 @@ from sklearn import manifold, mixture, metrics
 from ltsa import LocalTangentSpaceAlignment
 import matplotlib.pyplot as plt
 import os.path
-from time import time
 import numpy as np
+from time import time
 
 def unpickle(file):
     """
@@ -69,24 +69,22 @@ class ManifoldHelper:
                 print(f'\n   {n}_neighbors:', end='')
 
                 for m in self.methods:
-                    ari_results[m][i, j], time = self._evaluate_method(X, Y, m, n, d, n_components)
-                    print(f' {ari_results[m][i, j]:.2f}({(time):.1f}s) ', end='')
+                    t0 = time()
+                    ari_results[m][i, j] = self._evaluate_method(X, Y, m, n, d, n_components)
+                    t1 = time()
+                    print(f' {ari_results[m][i, j]:.2f} ({t1 - t0:.2f}s)', end='')
         return ari_results
                     
     def _evaluate_method(self, X, Y, method, n_neighbors, d_dimension, n_components):
         try:
-            t0 = time()
             Xd = self.fit_transform(X, method, n_neighbors, d_dimension)
-            t1 = time()
             ari_result = self.evaluate_gmm_ari(Xd, Y, n_components)
         except:
             # LTSA pode falhar com eigen_solver de sklearn
             try:
                 # tente trocar o eigen_solver para ver se há alteração de resultado
                 self._change_eigen_solver()
-                t0 = time()
                 Xd = self.fit_transform(X, method, n_neighbors, d_dimension)
-                t1 = time()
                 ari_result = self.evaluate_gmm_ari(Xd, Y, n_components)
                 # se esta mensagem aparecer significa que o eigen_solver foi alterado com sucesso
                 print(f'eigen_solver={self.eigen_solver}', end='')
@@ -94,10 +92,8 @@ class ManifoldHelper:
                 self._change_eigen_solver() 
             except:
                 ari_result = -1.0
-                t0 = 0
-                t1 = -1
 
-        return (ari_result, t1 - t0)
+        return ari_result
             
     def _get_manifold_method(
         self, 
