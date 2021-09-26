@@ -1,5 +1,6 @@
 from typing import OrderedDict
 from sklearn import manifold, mixture, metrics
+# see github.com/MarcoGrivol/ltsa
 from ltsa import LocalTangentSpaceAlignment
 import matplotlib.pyplot as plt
 import os.path
