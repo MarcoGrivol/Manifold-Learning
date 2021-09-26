@@ -16,6 +16,12 @@ def unpickle(file):
     return dict
 
 class ManifoldHelper:
+    """
+    Helper class to facilitate the use and comparison of multiple
+    manifold learning algorithms
+    
+    See notebook: "MNIST Multiple Tests for class usage.
+    """
 
     def __init__(
         self, 
@@ -56,6 +62,10 @@ class ManifoldHelper:
         return self._eval_ari(gmm_predict, Y)
 
     def evaluate_all(self, X, Y, n_components) -> OrderedDict:
+        """
+        Evaluate using Adjusted Rand Index all the methods selected with
+        the neighbors and dimensions defined
+        """
         ari_results = OrderedDict()
         for m in self.methods:
             ari_results[m] = np.empty((len(self.dimensions), len(self.n_neighbors)))
@@ -76,19 +86,20 @@ class ManifoldHelper:
         return ari_results
                     
     def _evaluate_method(self, X, Y, method, n_neighbors, d_dimension, n_components):
+        """
+        Evaluate the method with ARI
+        """
         try:
             Xd = self.fit_transform(X, method, n_neighbors, d_dimension)
             ari_result = self.evaluate_gmm_ari(Xd, Y, n_components)
         except:
-            # LTSA pode falhar com eigen_solver de sklearn
+            # LTSA may fail with eigen_solver='arpack'
             try:
-                # tente trocar o eigen_solver para ver se há alteração de resultado
+                # try changin the eigen_solver for different results
                 self._change_eigen_solver()
                 Xd = self.fit_transform(X, method, n_neighbors, d_dimension)
                 ari_result = self.evaluate_gmm_ari(Xd, Y, n_components)
-                # se esta mensagem aparecer significa que o eigen_solver foi alterado com sucesso
                 print(f'eigen_solver={self.eigen_solver}', end='')
-                # volte o eigen_solver ao definido pelo usuário
                 self._change_eigen_solver() 
             except:
                 ari_result = -1.0
@@ -101,6 +112,9 @@ class ManifoldHelper:
         n_neighbors, 
         d_dimension
     ) -> manifold:
+        """
+        Get the manifold method, easier than calling the sklearn functions
+        """
         
         if method_name == 'ISOMAP':
             return manifold.Isomap(
@@ -162,6 +176,9 @@ class ManifoldHelper:
             self.eigen_solver = 'arpack'
     
     def saveARI(self, ari_results, path='results/', add=''):
+        """
+        Saves the ARI results from evaluate_all function into a .npy file
+        """
         for method, data in ari_results.items():
             if not os.path.isfile(f'{path}{method}_{add}.npy'):
                 with open(f'{path}{method}_{add}.npy', 'wb') as file:
@@ -171,12 +188,18 @@ class ManifoldHelper:
                 print(f'File exists! saveARI does not override.')
         
     def loadARI(self, methods, path='results/', add=''):
+        """
+        Load the ARI results from a .npy file
+        """
         ari_results = OrderedDict()
         for m in methods:
             ari_results[m] = np.load(f'{path}{m}_{add}.npy')
         return ari_results
 
     def plot_ari_results(self, ari_results, neighbors, dimensions):
+        """
+        Plot ari_results
+        """
         fig, axs = plt.subplots(1, len(ari_results), figsize=(20, 20))
         for ax, m in zip(axs, ari_results.keys()):
             # alternative cmap RdYlGn
